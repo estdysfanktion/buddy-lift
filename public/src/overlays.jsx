@@ -207,21 +207,22 @@ function ExercisePicker({ accent, currentExercise, onSwap, onClose }) {
 // ─────────────────────────────────────────────────────────────
 function HistoryScreen({ accent, history }) {
   const exercises = [...new Set(history.map(h => h.exercise))];
-  const [selected, setSelected] = React.useState('Dumbbell bench press');
+  const [selected, setSelected] = React.useState(null);
+  const effectiveSelected = selected && exercises.includes(selected) ? selected : exercises[0];
 
   const data = history
-    .filter(h => h.exercise === selected)
+    .filter(h => h.exercise === effectiveSelected)
     .sort((a,b) => a.date.localeCompare(b.date))
     .map(h => ({
       date: h.date,
       weight: h.weight,
       volume: h.volume,
-      bestSet: Math.max(...h.sets),
+      bestSet: h.sets.length ? Math.max(...h.sets) : 0,
       totalReps: h.sets.reduce((a,b)=>a+b, 0),
     }));
 
-  const dayId = history.find(h => h.exercise === selected)?.day || 1;
-  const dayAccent = DAY_ACCENTS[dayId].hex;
+  const dayId = history.find(h => h.exercise === effectiveSelected)?.day || 1;
+  const dayAccent = DAY_ACCENTS[dayId]?.hex || accent;
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', paddingBottom: 120, background: BL.bg }}>
@@ -241,7 +242,7 @@ function HistoryScreen({ accent, history }) {
           {exercises.map(ex => {
             const d = history.find(h => h.exercise === ex)?.day;
             const c = DAY_ACCENTS[d].hex;
-            const active = ex === selected;
+            const active = ex === effectiveSelected;
             return (
               <button key={ex} onClick={() => setSelected(ex)} style={{
                 flexShrink: 0, padding: '7px 12px', borderRadius: 20,
