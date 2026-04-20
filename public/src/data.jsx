@@ -134,17 +134,49 @@ function nextDayId(history) {
   return 1;
 }
 
-// Streak = count of calendar-distinct workout days going back, allowing gaps of ≤2d
-function computeStreak(history) {
-  const days = [...new Set(history.map(h => h.date))].sort().reverse();
-  if (!days.length) return 0;
-  let streak = 1;
-  let prev = new Date(days[0]);
-  for (let i = 1; i < days.length; i++) {
-    const cur = new Date(days[i]);
-    const diff = (prev - cur) / 86400000;
-    if (diff <= 3) { streak++; prev = cur; } else break;
+// Streak = consecutive weeks with ≥2 distinct workout days.
+// Current week gets a grace period — if it hasn't hit 2 yet, skip it and check prior weeks.
+function computeStreak(history, now = new Date()) {
+  if (!history.length) return 0;
+
+  function mondayOf(d) {
+    const day = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    mon.setHours(0, 0, 0, 0);
+    return mon;
   }
+
+  // Count distinct workout days per week
+  const weekMap = {};
+  [...new Set(history.map(h => h.date))].forEach(dateStr => {
+    const key = mondayOf(new Date(dateStr)).toISOString().slice(0, 10);
+    weekMap[key] = (weekMap[key] || 0) + 1;
+  });
+
+  const currentMonKey = mondayOf(now).toISOString().slice(0, 10);
+  let streak = 0;
+  let cursor = mondayOf(now);
+
+  while (true) {
+    const key = cursor.toISOString().slice(0, 10);
+    const count = weekMap[key] || 0;
+    const isCurrent = key === currentMonKey;
+
+    if (isCurrent && count < 2) {
+      // grace: current week still in progress, look back further
+      cursor.setDate(cursor.getDate() - 7);
+      continue;
+    }
+
+    if (count >= 2) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 7);
+    } else {
+      break;
+    }
+  }
+
   return streak;
 }
 
