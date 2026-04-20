@@ -1,5 +1,6 @@
 // api/delete-pages.js — archives Notion pages by ID
 import { Client } from '@notionhq/client';
+import { checkPin } from './health.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7,6 +8,8 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!checkPin(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   if (!process.env.NOTION_TOKEN) {
     return res.status(500).json({ error: 'Missing NOTION_TOKEN' });

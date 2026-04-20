@@ -1,6 +1,6 @@
 // Home screen — streak, week volume, next day, recent activity
 
-function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
+function HomeScreen({ accent, dayId, history, onStart, onSettings, onCycleDay }) {
   const day = DAYS[dayId];
   const streak = computeStreak(history);
   const vol = weekVolume(history);
@@ -74,12 +74,25 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
           fontSize: 220, fontWeight: 700, color: accent, opacity: 0.08,
           lineHeight: 1, letterSpacing: -10,
         }}>0{dayId}</div>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10,
-          fontFamily: MONO, fontSize: 11, color: accent, letterSpacing: 1,
-        }}>
-          <div style={{ width: 6, height: 6, borderRadius: 3, background: accent, boxShadow: `0 0 8px ${accent}` }} />
-          UP NEXT · DAY {dayId}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontFamily: MONO, fontSize: 11, color: accent, letterSpacing: 1,
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: 3, background: accent, boxShadow: `0 0 8px ${accent}` }} />
+            UP NEXT · DAY {dayId}
+          </div>
+          {onCycleDay && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[-1, 1].map(dir => (
+                <button key={dir} onClick={() => onCycleDay(dir)} style={{
+                  width: 26, height: 26, borderRadius: 8, border: `1px solid ${accent}44`,
+                  background: 'transparent', color: accent, cursor: 'pointer',
+                  fontFamily: MONO, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{dir === -1 ? '‹' : '›'}</button>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ fontFamily: SANS, fontSize: 26, fontWeight: 700, letterSpacing: -0.6, marginBottom: 2 }}>
           {day.title}

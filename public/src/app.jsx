@@ -39,7 +39,73 @@ function seedMidSession(session) {
   return session;
 }
 
+function LockScreen({ onUnlock }) {
+  const [pin, setPin] = React.useState('');
+  const [error, setError] = React.useState(false);
+
+  const submit = async () => {
+    try {
+      const res = await fetch('/api/health', { headers: { 'x-app-pin': pin } });
+      const data = await res.json();
+      if (data.pinOk) {
+        localStorage.setItem('bl_pin', pin);
+        onUnlock(pin);
+      } else {
+        setError(true);
+        setPin('');
+        setTimeout(() => setError(false), 1200);
+      }
+    } catch {
+      setError(true);
+    }
+  };
+
+  const accent = '#4B9CFF';
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#0A0B0D',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Inter', system-ui, sans-serif", gap: 24,
+    }}>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>Buddy Lift</div>
+      <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.6, color: '#fff' }}>Enter PIN</div>
+      <input
+        type="password" inputMode="numeric" maxLength={8} value={pin}
+        onChange={e => setPin(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+        autoFocus
+        style={{
+          width: 160, textAlign: 'center', padding: '14px 16px',
+          borderRadius: 14, border: `1.5px solid ${error ? '#FF5F57' : 'rgba(255,255,255,0.1)'}`,
+          background: '#17181C', color: '#fff', fontSize: 22, letterSpacing: 6,
+          fontFamily: "'JetBrains Mono', monospace", outline: 'none',
+          transition: 'border-color .2s',
+        }}
+        placeholder="••••"
+      />
+      <button onClick={submit} style={{
+        padding: '12px 32px', borderRadius: 12, background: accent,
+        color: '#0A0B0D', border: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+      }}>Unlock</button>
+      {error && <div style={{ color: '#FF5F57', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>Wrong PIN</div>}
+    </div>
+  );
+}
+
 function App() {
+  const [pin, setPin] = useState(() => localStorage.getItem('bl_pin') || '');
+  const [unlocked, setUnlocked] = useState(false);
+
+  useEffect(() => {
+    if (!pin) return;
+    fetch('/api/health', { headers: { 'x-app-pin': pin } })
+      .then(r => r.json())
+      .then(d => { if (d.pinOk) setUnlocked(true); else { localStorage.removeItem('bl_pin'); } })
+      .catch(() => {});
+  }, []);
+
+  if (!unlocked) return <LockScreen onUnlock={(p) => { setPin(p); setUnlocked(true); }} />;
+
   const [tweaks, setTweaks] = useState(() => ({ ...window.TWEAKS }));
   const setTweak = (k, v) => {
     setTweaks(t => {
@@ -98,7 +164,7 @@ function useHistory() {
   const [history, setHistory] = useState(HISTORY_SEED);
 
   useEffect(() => {
-    fetch('/api/history')
+    fetch('/api/history', { headers: { 'x-app-pin': localStorage.getItem('bl_pin') || '' } })
       .then(r => r.json())
       .then(data => { if (data.ok && data.rows.length > 0) setHistory(data.rows); })
       .catch(() => {});
@@ -110,13 +176,29 @@ function useHistory() {
 // ─────────────────────────────────────────────────────────────
 // Flow prototype — single navigable phone
 // ─────────────────────────────────────────────────────────────
+const DAY_IDS = [1, 3, 5];
+
 function FlowPrototype({ cardVariant }) {
   const history = useHistory();
-  const dayId = nextDayId(history);
+
+  // Manual day override stored in localStorage, falls back to history-derived next day
+  const [manualDay, setManualDay] = useState(() => {
+    const saved = localStorage.getItem('bl_next_day');
+    return saved ? parseInt(saved) : null;
+  });
+
+  const autoDayId = nextDayId(history);
+  const dayId = manualDay ?? autoDayId;
   const accent = DAY_ACCENTS[dayId].hex;
 
-  const [session, setSession] = useState(() => buildSession(dayId));
+  const cycleDay = (dir) => {
+    const idx = DAY_IDS.indexOf(dayId);
+    const next = DAY_IDS[(idx + dir + DAY_IDS.length) % DAY_IDS.length];
+    setManualDay(next);
+    localStorage.setItem('bl_next_day', String(next));
+  };
 
+  const [session, setSession] = useState(() => buildSession(dayId));
   useEffect(() => { setSession(buildSession(dayId)); }, [dayId]);
 
   useEffect(() => {
@@ -124,11 +206,20 @@ function FlowPrototype({ cardVariant }) {
     return () => clearInterval(t);
   }, []);
 
+  // After completing a workout, advance to next day automatically
+  const onComplete = () => {
+    const idx = DAY_IDS.indexOf(dayId);
+    const next = DAY_IDS[(idx + 1) % DAY_IDS.length];
+    setManualDay(next);
+    localStorage.setItem('bl_next_day', String(next));
+  };
+
   return (
     <PhoneShell accent={accent}>
       <WorkoutDemo
         accent={accent} dayId={dayId} session={session} setSession={setSession}
         cardVariant={cardVariant} history={history}
+        onCycleDay={cycleDay} onComplete={onComplete}
       />
     </PhoneShell>
   );
@@ -175,7 +266,7 @@ function HomeDemo({ accent, dayId }) {
   );
 }
 
-function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history = HISTORY_SEED }) {
+function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history = HISTORY_SEED, onCycleDay, onComplete: onCompleteExternal }) {
   const [tab, setTab] = useState('workout');
   const [restStart, setRestStart] = useState(0); // triggers banner
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -203,12 +294,12 @@ function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history 
   };
 
   if (completed) {
-    return <SummaryScreen accent={accent} dayId={dayId} session={session} onDone={() => setCompleted(false)} liveSync={typeof window !== 'undefined' && window.location.protocol !== 'file:'} />;
+    return <SummaryScreen accent={accent} dayId={dayId} session={session} onDone={() => { setCompleted(false); onCompleteExternal?.(); }} liveSync={typeof window !== 'undefined' && window.location.protocol !== 'file:'} />;
   }
 
   return (
     <>
-      {tab === 'home' && <HomeScreen accent={accent} dayId={dayId} history={history} onStart={() => setTab('workout')} />}
+      {tab === 'home' && <HomeScreen accent={accent} dayId={dayId} history={history} onStart={() => setTab('workout')} onCycleDay={onCycleDay} />}
       {tab === 'workout' && (
         <ActiveWorkoutScreen
           accent={accent}

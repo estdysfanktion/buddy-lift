@@ -1,9 +1,14 @@
 // Settings screen + real Notion sync helpers
 
 // Detect if we're running against a real /api backend (Vercel) vs the design canvas
+function getPin() { return localStorage.getItem('bl_pin') || ''; }
+function pinHeaders(extra = {}) {
+  return { 'x-app-pin': getPin(), ...extra };
+}
+
 async function checkHealth() {
   try {
-    const r = await fetch('/api/health');
+    const r = await fetch('/api/health', { headers: pinHeaders() });
     if (!r.ok) return { ok: false, reason: 'http_' + r.status };
     return await r.json();
   } catch (e) {
@@ -14,7 +19,7 @@ async function checkHealth() {
 async function postSync(payload) {
   const r = await fetch('/api/sync', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: pinHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
   return r.json();

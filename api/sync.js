@@ -3,17 +3,19 @@
 // Creates one Notion page per exercise in the Simple Workouts database.
 
 import { Client } from '@notionhq/client';
+import { checkPin } from './health.js';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const DB_ID = process.env.NOTION_DATABASE_ID;
 
 export default async function handler(req, res) {
-  // CORS (same-origin in prod, but helpful in dev)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-pin');
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!checkPin(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   if (!process.env.NOTION_TOKEN || !DB_ID) {
     return res.status(500).json({ error: 'Server missing NOTION_TOKEN or NOTION_DATABASE_ID' });
