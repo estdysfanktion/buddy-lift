@@ -72,7 +72,6 @@ function App() {
       )}
 
       <TweaksPanel visible={editMode} tweaks={tweaks} setTweak={setTweak} />
-      {!editMode && <TweaksHint />}
     </div>
   );
 }
