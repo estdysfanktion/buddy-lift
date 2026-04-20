@@ -65,18 +65,6 @@ function App() {
 
   return (
     <div className="stage">
-      <div className="stage-header">
-        <div className="stage-eyebrow">Buddy Lift · iOS · dark</div>
-        <div className="stage-title" style={{
-          background: `linear-gradient(180deg, #fff, rgba(255,255,255,0.6))`,
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-        }}>Buddy Lift</div>
-        <div className="stage-subtitle">
-          A dense, data-rich workout logger that syncs to the <span style={{ color: accent }}>Simple Workouts</span> Notion database.
-          Fully clickable — tap a set bubble to log reps, swap exercises, watch the rest banner, finish the session.
-        </div>
-      </div>
-
       {tweaks.showAllVariants ? (
         <VariantsCanvas dayId={dayId} accent={accent} />
       ) : (
@@ -105,53 +93,25 @@ function TweaksHint() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Flow prototype — actual clickable app, 3 screens in a row
+// Flow prototype — single navigable phone
 // ─────────────────────────────────────────────────────────────
 function FlowPrototype({ dayId, accent, cardVariant }) {
   const [session, setSession] = useState(() => seedMidSession(buildSession(dayId)));
 
-  // Rebuild session when day changes
   useEffect(() => { setSession(seedMidSession(buildSession(dayId))); }, [dayId]);
 
-  // Elapsed timer
   useEffect(() => {
     const t = setInterval(() => setSession(s => ({ ...s, elapsed: s.elapsed + 1 })), 1000);
     return () => clearInterval(t);
   }, []);
 
   return (
-    <div className="screens-row">
-      <PhoneCell dayId={dayId} label="Home · tap gear for settings">
-        <HomeDemo accent={accent} dayId={dayId} />
-      </PhoneCell>
-
-      <PhoneCell dayId={dayId} label="Active Workout (hero)" highlight>
-        <WorkoutDemo
-          accent={accent} dayId={dayId} session={session} setSession={setSession}
-          cardVariant={cardVariant}
-        />
-      </PhoneCell>
-
-      <PhoneCell dayId={dayId} label="Settings · Notion sync">
-        <SettingsDemo accent={accent} />
-      </PhoneCell>
-
-      <PhoneCell dayId={dayId} label="Summary · Notion sync">
-        <SummaryDemo accent={accent} dayId={dayId} session={session} />
-      </PhoneCell>
-
-      <PhoneCell dayId={dayId} label="Exercise history">
-        <HistoryDemo accent={accent} />
-      </PhoneCell>
-
-      <PhoneCell dayId={dayId} label="Swap exercise">
-        <PickerDemo accent={accent} />
-      </PhoneCell>
-
-      <PhoneCell dayId={dayId} label="Number pad · log reps">
-        <NumberPadDemo accent={accent} />
-      </PhoneCell>
-    </div>
+    <PhoneShell accent={accent}>
+      <WorkoutDemo
+        accent={accent} dayId={dayId} session={session} setSession={setSession}
+        cardVariant={cardVariant}
+      />
+    </PhoneShell>
   );
 }
 
