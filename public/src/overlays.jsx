@@ -395,12 +395,13 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
   const totalReps = session.exercises.reduce((a, e) => a + e.sets.reduce((s, r) => s + (r || 0), 0), 0);
 
   // Sync state: 'idle' | 'syncing' | 'ok' | 'partial' | 'fail' | 'demo'
-  const [syncState, setSyncState] = React.useState(liveSync ? 'idle' : 'demo');
+  const [syncState, setSyncState] = React.useState('idle');
   const [syncResults, setSyncResults] = React.useState(null);
 
   const doSync = React.useCallback(async () => {
-    if (!liveSync || typeof postSync !== 'function') {
-      setSyncState('demo');
+    if (typeof postSync !== 'function') {
+      setSyncState('fail');
+      setSyncResults([{ ok: false, error: 'postSync not available' }]);
       return;
     }
     setSyncState('syncing');
@@ -425,7 +426,6 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
     }
   }, [liveSync, dayId, session]);
 
-  React.useEffect(() => { if (liveSync) doSync(); }, [liveSync]);
 
   return (
     <div style={{
@@ -505,8 +505,10 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
           state={syncState}
           results={syncResults}
           accent={accent}
+          onSync={doSync}
           onRetry={doSync}
           exerciseCount={session.exercises.length}
+          liveSync={liveSync}
         />
 
         <button onClick={onDone} style={{
@@ -522,35 +524,33 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
 
 Object.assign(window, { NumberPad, RestBanner, ExercisePicker, HistoryScreen, SummaryScreen });
 
-function SyncStrip({ state, results, accent, onRetry, exerciseCount }) {
+function SyncStrip({ state, results, accent, onSync, onRetry, exerciseCount, liveSync }) {
   const okCount = results?.filter(r => r.ok).length ?? 0;
   const failCount = results?.filter(r => !r.ok).length ?? 0;
 
   const pal = state === 'ok' ? BL.green
-    : state === 'demo' ? BL.text3
     : state === 'syncing' ? accent
     : state === 'partial' ? '#FFB347'
     : state === 'fail' ? BL.red
-    : BL.text3;
+    : accent;
 
   const label = state === 'ok' ? 'Synced to Notion'
-    : state === 'demo' ? 'Demo mode — not synced'
     : state === 'syncing' ? 'Syncing to Notion…'
     : state === 'partial' ? `${okCount}/${exerciseCount} synced`
     : state === 'fail' ? 'Sync failed'
-    : 'Pending…';
+    : 'Save to Notion';
 
-  const sub = state === 'ok' ? `${exerciseCount} rows → Simple Workouts · just now`
-    : state === 'demo' ? 'Deploy to Vercel to enable real sync'
-    : state === 'syncing' ? `writing ${exerciseCount} rows…`
+  const sub = state === 'ok' ? `${exerciseCount} exercises saved · just now`
+    : state === 'syncing' ? `Writing ${exerciseCount} exercises…`
     : state === 'partial' ? `${failCount} failed — tap retry`
     : state === 'fail' ? (results?.[0]?.error || 'Check Settings → Notion sync')
-    : '';
+    : `${exerciseCount} exercises with sets, weights & date`;
 
   return (
     <div style={{
       marginTop: 16, padding: 14, borderRadius: 14,
-      background: BL.card, border: `1px solid ${state === 'fail' ? BL.red + '44' : BL.line}`,
+      background: BL.card,
+      border: `1px solid ${state === 'fail' ? BL.red + '44' : state === 'ok' ? BL.green + '44' : accent + '33'}`,
       display: 'flex', alignItems: 'center', gap: 12,
     }}>
       <div style={{
@@ -570,10 +570,17 @@ function SyncStrip({ state, results, accent, onRetry, exerciseCount }) {
           {sub}
         </div>
       </div>
+      {state === 'idle' && (
+        <button onClick={onSync} style={{
+          padding: '8px 14px', borderRadius: 10, background: accent,
+          color: '#0A0B0D', border: 0, fontFamily: SANS, fontSize: 12, fontWeight: 700,
+          cursor: 'pointer', whiteSpace: 'nowrap',
+        }}>Sync →</button>
+      )}
       {(state === 'fail' || state === 'partial') && (
         <button onClick={onRetry} style={{
-          padding: '6px 10px', borderRadius: 8, background: accent,
-          color: '#0A0B0D', border: 0, fontFamily: SANS, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          padding: '8px 14px', borderRadius: 10, background: accent,
+          color: '#0A0B0D', border: 0, fontFamily: SANS, fontSize: 12, fontWeight: 700, cursor: 'pointer',
         }}>Retry</button>
       )}
     </div>

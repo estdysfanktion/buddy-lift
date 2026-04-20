@@ -112,10 +112,10 @@ function useHistory() {
 // Flow prototype — single navigable phone
 // ─────────────────────────────────────────────────────────────
 function FlowPrototype({ dayId, accent, cardVariant }) {
-  const [session, setSession] = useState(() => seedMidSession(buildSession(dayId)));
+  const [session, setSession] = useState(() => buildSession(dayId));
   const history = useHistory();
 
-  useEffect(() => { setSession(seedMidSession(buildSession(dayId))); }, [dayId]);
+  useEffect(() => { setSession(buildSession(dayId)); }, [dayId]);
 
   useEffect(() => {
     const t = setInterval(() => setSession(s => ({ ...s, elapsed: s.elapsed + 1 })), 1000);
