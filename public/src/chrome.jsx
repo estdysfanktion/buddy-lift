@@ -54,19 +54,15 @@ function StatusBarDark({ time = '9:41', tint = '#fff' }) {
   );
 }
 
-function PhoneShell({ children, accent = '#4B9CFF' }) {
+function PhoneShell({ children }) {
   return (
     <div style={{
-      width: 402, height: 874, borderRadius: 56, overflow: 'hidden',
-      position: 'relative', background: BL.bg,
-      boxShadow: `0 40px 120px rgba(0,0,0,0.6), 0 0 0 2px #1a1c20, 0 0 0 10px #0d0e11, 0 0 60px -10px ${accent}33`,
-      fontFamily: SANS,
-      WebkitFontSmoothing: 'antialiased',
-      color: BL.text,
+      position: 'fixed', inset: 0,
+      background: BL.bg, fontFamily: SANS,
+      WebkitFontSmoothing: 'antialiased', color: BL.text,
+      display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
@@ -86,8 +82,8 @@ function TabBar({ tab, onTab, accent }) {
   ];
   return (
     <div style={{
-      position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
-      paddingBottom: 34, paddingTop: 8, display: 'flex',
+      position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40,
+      paddingBottom: 'env(safe-area-inset-bottom, 16px)', paddingTop: 8, display: 'flex',
       background: 'linear-gradient(to top, rgba(10,11,13,0.95) 40%, rgba(10,11,13,0))',
       backdropFilter: 'blur(20px)',
     }}>
