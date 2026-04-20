@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buddy Lift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #050507; font-family: 'Inter', -apple-system, system-ui, sans-serif; color: #fff; min-height: 100vh; overflow-x: hidden; }
+  button { font-family: inherit; }
+  input { font-family: inherit; }
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+
+  .stage {
+    min-height: 100vh;
+    padding: 60px 40px 120px;
+    display: flex; flex-direction: column; align-items: center; gap: 40px;
+    background:
+      radial-gradient(50% 30% at 50% 0%, rgba(75,156,255,0.08), transparent 70%),
+      radial-gradient(60% 40% at 85% 60%, rgba(184,255,60,0.05), transparent 70%),
+      #050507;
+  }
+  .stage-header {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    margin-bottom: -12px;
+  }
+  .stage-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+  .stage-title {
+    font-size: 32px; font-weight: 700; letter-spacing: -0.8px;
+  }
+  .stage-subtitle {
+    font-size: 13px; color: rgba(255,255,255,0.45); max-width: 540px; text-align: center;
+    line-height: 1.5;
+  }
+  .screens-row {
+    display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+  }
+  .screen-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .screen-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1.6px; color: rgba(255,255,255,0.45); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .screen-dot { width: 6px; height: 6px; border-radius: 3px; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    // Tweakable defaults — edited by host via __edit_mode_set_keys
+    window.TWEAKS = /*EDITMODE-BEGIN*/{
+      "cardVariant": "bubbles",
+      "dayId": 1,
+      "autoDayColor": true,
+      "showAllVariants": false
+    }/*EDITMODE-END*/;
+  </script>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="src/data.jsx"></script>
+  <script type="text/babel" src="src/chrome.jsx"></script>
+  <script type="text/babel" src="src/home.jsx"></script>
+  <script type="text/babel" src="src/workout.jsx"></script>
+  <script type="text/babel" src="src/overlays.jsx"></script>
+  <script type="text/babel" src="src/settings.jsx"></script>
+  <script type="text/babel" src="src/tweaks.jsx"></script>
+  <script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>

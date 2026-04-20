@@ -1,0 +1,13 @@
+{
+  "name": "buddy-lift",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Buddy Lift — mobile workout logger that syncs to Notion 'Simple Workouts' database.",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  }
+}
