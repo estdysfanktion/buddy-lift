@@ -72,7 +72,7 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings, onCycleDay })
         <div style={{
           position: 'absolute', right: -20, top: -40, fontFamily: MONO,
           fontSize: 220, fontWeight: 700, color: accent, opacity: 0.08,
-          lineHeight: 1, letterSpacing: -10,
+          lineHeight: 1, letterSpacing: -10, pointerEvents: 'none',
         }}>0{dayId}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{
