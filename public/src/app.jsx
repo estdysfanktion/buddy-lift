@@ -68,7 +68,7 @@ function App() {
       {tweaks.showAllVariants ? (
         <VariantsCanvas dayId={dayId} accent={accent} />
       ) : (
-        <FlowPrototype dayId={dayId} accent={accent} cardVariant={tweaks.cardVariant} />
+        <FlowPrototype cardVariant={tweaks.cardVariant} />
       )}
 
       <TweaksPanel visible={editMode} tweaks={tweaks} setTweak={setTweak} />
@@ -110,9 +110,12 @@ function useHistory() {
 // ─────────────────────────────────────────────────────────────
 // Flow prototype — single navigable phone
 // ─────────────────────────────────────────────────────────────
-function FlowPrototype({ dayId, accent, cardVariant }) {
-  const [session, setSession] = useState(() => buildSession(dayId));
+function FlowPrototype({ cardVariant }) {
   const history = useHistory();
+  const dayId = nextDayId(history);
+  const accent = DAY_ACCENTS[dayId].hex;
+
+  const [session, setSession] = useState(() => buildSession(dayId));
 
   useEffect(() => { setSession(buildSession(dayId)); }, [dayId]);
 

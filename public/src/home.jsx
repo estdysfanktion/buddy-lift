@@ -39,7 +39,7 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
       {/* Greeting + date */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
         <div style={{ fontFamily: SANS, fontSize: 13, color: BL.text3, fontWeight: 500, letterSpacing: 0.2 }}>
-          MON · APR 20
+          {['SUN','MON','TUE','WED','THU','FRI','SAT'][today.getDay()]} · {['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][today.getMonth()]} {today.getDate()}
         </div>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
