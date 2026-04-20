@@ -93,29 +93,20 @@ function LockScreen({ onUnlock }) {
 }
 
 function App() {
+  // All hooks must be at the top — no hooks after conditional returns
   const [pin, setPin] = useState(() => localStorage.getItem('bl_pin') || '');
   const [unlocked, setUnlocked] = useState(false);
+  const [tweaks, setTweaks] = useState(() => ({ ...window.TWEAKS }));
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     if (!pin) return;
     fetch('/api/health', { headers: { 'x-app-pin': pin } })
       .then(r => r.json())
-      .then(d => { if (d.pinOk) setUnlocked(true); else { localStorage.removeItem('bl_pin'); } })
+      .then(d => { if (d.pinOk) setUnlocked(true); else localStorage.removeItem('bl_pin'); })
       .catch(() => {});
   }, []);
 
-  if (!unlocked) return <LockScreen onUnlock={(p) => { setPin(p); setUnlocked(true); }} />;
-
-  const [tweaks, setTweaks] = useState(() => ({ ...window.TWEAKS }));
-  const setTweak = (k, v) => {
-    setTweaks(t => {
-      const next = { ...t, [k]: v };
-      try { window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*'); } catch (e) {}
-      return next;
-    });
-  };
-
-  const [editMode, setEditMode] = useState(false);
   useEffect(() => {
     const onMsg = (e) => {
       if (e.data?.type === '__activate_edit_mode') setEditMode(true);
@@ -126,17 +117,23 @@ function App() {
     return () => window.removeEventListener('message', onMsg);
   }, []);
 
-  const dayId = tweaks.dayId;
-  const accent = DAY_ACCENTS[dayId].hex;
+  if (!unlocked) return <LockScreen onUnlock={(p) => { setPin(p); setUnlocked(true); }} />;
+
+  const setTweak = (k, v) => {
+    setTweaks(t => {
+      const next = { ...t, [k]: v };
+      try { window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*'); } catch (e) {}
+      return next;
+    });
+  };
 
   return (
     <div className="stage">
       {tweaks.showAllVariants ? (
-        <VariantsCanvas dayId={dayId} accent={accent} />
+        <VariantsCanvas dayId={tweaks.dayId} accent={DAY_ACCENTS[tweaks.dayId].hex} />
       ) : (
         <FlowPrototype cardVariant={tweaks.cardVariant} />
       )}
-
       <TweaksPanel visible={editMode} tweaks={tweaks} setTweak={setTweak} />
     </div>
   );
