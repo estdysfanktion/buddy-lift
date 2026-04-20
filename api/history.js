@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
       for (const page of resp.results) {
         const p = page.properties;
-        const exercise = p.Exercise?.multi_select?.[0]?.name;
+        const exercise = p[' Exercise ']?.multi_select?.[0]?.name;
         if (!exercise) continue;
         const date = p.Date?.date?.start;
         if (!date) continue;

@@ -55,7 +55,7 @@ function buildProperties({ date, dayTitle, exercise, weight, rest, sets }) {
       title: [{ text: { content: `${dayTitle || 'Workout'} – ${exercise}` } }],
     },
     'Date': { date: { start: date } },
-    'Exercise': { multi_select: [{ name: exercise }] },
+    ' Exercise ': { multi_select: [{ name: exercise }] },
     'Weight': { number: Number(weight) || 0 },
     'Rest': { number: Number(rest) || 0 },
   };

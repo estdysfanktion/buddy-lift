@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const notion = new Client({ auth: process.env.NOTION_TOKEN });
     const db = await notion.databases.retrieve({ database_id: process.env.NOTION_DATABASE_ID });
     const propNames = Object.keys(db.properties || {});
-    const required = ['Name', 'Date', 'Exercise', 'Weight', 'Rest', 'Set 1'];
+    const required = ['Name', 'Date', ' Exercise ', 'Weight', 'Rest', 'Set 1'];
     const missing = required.filter(n => !propNames.includes(n));
     return res.status(200).json({
       ok: missing.length === 0,
