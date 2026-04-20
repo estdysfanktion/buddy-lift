@@ -7,6 +7,8 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
 
   // last 7 days activity grid
   const today = new Date();
+  const hour = today.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const grid = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(today);
     d.setDate(d.getDate() - (6 - i));
@@ -55,7 +57,7 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
         </div>
       </div>
       <div style={{ fontFamily: SANS, fontSize: 28, fontWeight: 700, letterSpacing: -0.6, marginBottom: 20 }}>
-        Good morning, Harry
+        {greeting}, Zakir
       </div>
 
       {/* Hero: next workout card */}
