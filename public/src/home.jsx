@@ -33,7 +33,7 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
 
   return (
     <div style={{
-      padding: '70px 20px 120px', height: '100%', overflowY: 'auto',
+      padding: '20px 20px 120px', height: '100%', overflowY: 'auto',
       background: `radial-gradient(120% 60% at 50% -10%, ${DAY_ACCENTS[dayId].soft} 0%, transparent 60%), ${BL.bg}`,
     }}>
       {/* Greeting + date */}

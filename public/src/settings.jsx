@@ -48,7 +48,7 @@ function SettingsScreen({ accent, onClose }) {
       height: '100%', overflowY: 'auto', paddingBottom: 120,
       background: BL.bg,
     }}>
-      <div style={{ padding: '62px 20px 14px' }}>
+      <div style={{ padding: '20px 20px 14px' }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 6,

@@ -64,24 +64,8 @@ function PhoneShell({ children, accent = '#4B9CFF' }) {
       WebkitFontSmoothing: 'antialiased',
       color: BL.text,
     }}>
-      {/* dynamic island */}
-      <div style={{
-        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
-        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
-      }} />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
-        <StatusBarDark />
-      </div>
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {children}
-      </div>
-      {/* home indicator */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
-        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
-        paddingBottom: 8, pointerEvents: 'none',
-      }}>
-        <div style={{ width: 139, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.45)' }} />
       </div>
     </div>
   );

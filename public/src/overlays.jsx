@@ -225,7 +225,7 @@ function HistoryScreen({ accent, history }) {
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', paddingBottom: 120, background: BL.bg }}>
-      <div style={{ padding: '62px 20px 14px' }}>
+      <div style={{ padding: '20px 20px 14px' }}>
         <div style={{ fontFamily: SANS, fontSize: 11, color: BL.text3, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
           Exercise history
         </div>
@@ -432,7 +432,7 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
       height: '100%', overflowY: 'auto', paddingBottom: 40,
       background: `radial-gradient(120% 60% at 50% -5%, ${DAY_ACCENTS[dayId].soft} 0%, transparent 60%), ${BL.bg}`,
     }}>
-      <div style={{ padding: '70px 20px 20px' }}>
+      <div style={{ padding: '20px 20px 20px' }}>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10,
           fontFamily: MONO, fontSize: 11, color: accent, letterSpacing: 1,

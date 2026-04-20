@@ -43,7 +43,7 @@ function ActiveWorkoutScreen({
     }}>
       {/* Sticky header */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 5, paddingTop: 55,
+        position: 'sticky', top: 0, zIndex: 5, paddingTop: 16,
         background: `linear-gradient(to bottom, ${BL.bg} 70%, ${BL.bg}ee)`,
         backdropFilter: 'blur(10px)',
       }}>
