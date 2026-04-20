@@ -6,7 +6,7 @@ function HomeScreen({ accent, dayId, history, onStart, onSettings }) {
   const vol = weekVolume(history);
 
   // last 7 days activity grid
-  const today = new Date('2026-04-20');
+  const today = new Date();
   const grid = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(today);
     d.setDate(d.getDate() - (6 - i));

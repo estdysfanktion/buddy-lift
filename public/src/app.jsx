@@ -93,10 +93,27 @@ function TweaksHint() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Live history — fetches from /api/history, falls back to seed
+// ─────────────────────────────────────────────────────────────
+function useHistory() {
+  const [history, setHistory] = useState(HISTORY_SEED);
+
+  useEffect(() => {
+    fetch('/api/history')
+      .then(r => r.json())
+      .then(data => { if (data.ok && data.rows.length > 0) setHistory(data.rows); })
+      .catch(() => {});
+  }, []);
+
+  return history;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Flow prototype — single navigable phone
 // ─────────────────────────────────────────────────────────────
 function FlowPrototype({ dayId, accent, cardVariant }) {
   const [session, setSession] = useState(() => seedMidSession(buildSession(dayId)));
+  const history = useHistory();
 
   useEffect(() => { setSession(seedMidSession(buildSession(dayId))); }, [dayId]);
 
@@ -109,7 +126,7 @@ function FlowPrototype({ dayId, accent, cardVariant }) {
     <PhoneShell accent={accent}>
       <WorkoutDemo
         accent={accent} dayId={dayId} session={session} setSession={setSession}
-        cardVariant={cardVariant}
+        cardVariant={cardVariant} history={history}
       />
     </PhoneShell>
   );
@@ -147,16 +164,16 @@ function HomeDemo({ accent, dayId }) {
       {settingsOpen && typeof SettingsScreen !== 'undefined'
         ? <SettingsScreen accent={accent} onClose={() => setSettingsOpen(false)} />
         : <>
-      {tab === 'home' && <HomeScreen accent={accent} dayId={dayId} history={HISTORY_SEED} onStart={() => setTab('workout')} onSettings={() => setSettingsOpen(true)} />}
+      {tab === 'home' && <HomeScreen accent={accent} dayId={dayId} history={history} onStart={() => setTab('workout')} onSettings={() => setSettingsOpen(true)} />}
       {tab === 'workout' && <MiniMessage text="Tap over on the hero phone →" accent={accent} />}
-      {tab === 'history' && <HistoryScreen accent={accent} history={HISTORY_SEED} />}
+      {tab === 'history' && <HistoryScreen accent={accent} history={history} />}
         </>}
       <TabBar tab={tab} onTab={setTab} accent={accent} />
     </>
   );
 }
 
-function WorkoutDemo({ accent, dayId, session, setSession, cardVariant }) {
+function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history = HISTORY_SEED }) {
   const [tab, setTab] = useState('workout');
   const [restStart, setRestStart] = useState(0); // triggers banner
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -189,7 +206,7 @@ function WorkoutDemo({ accent, dayId, session, setSession, cardVariant }) {
 
   return (
     <>
-      {tab === 'home' && <HomeScreen accent={accent} dayId={dayId} history={HISTORY_SEED} onStart={() => setTab('workout')} />}
+      {tab === 'home' && <HomeScreen accent={accent} dayId={dayId} history={history} onStart={() => setTab('workout')} />}
       {tab === 'workout' && (
         <ActiveWorkoutScreen
           accent={accent}
@@ -202,7 +219,7 @@ function WorkoutDemo({ accent, dayId, session, setSession, cardVariant }) {
           cardVariant={cardVariant}
         />
       )}
-      {tab === 'history' && <HistoryScreen accent={accent} history={HISTORY_SEED} />}
+      {tab === 'history' && <HistoryScreen accent={accent} history={history} />}
 
       {tab === 'workout' && restStart && (
         <RestBanner
@@ -250,7 +267,7 @@ function HistoryDemo({ accent }) {
   const [tab, setTab] = useState('history');
   return (
     <>
-      <HistoryScreen accent={accent} history={HISTORY_SEED} />
+      <HistoryScreen accent={accent} history={history} />
       <TabBar tab={tab} onTab={setTab} accent={accent} />
     </>
   );

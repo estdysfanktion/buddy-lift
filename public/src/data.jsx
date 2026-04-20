@@ -148,7 +148,7 @@ function computeStreak(history) {
   return streak;
 }
 
-function weekVolume(history, now = new Date('2026-04-20')) {
+function weekVolume(history, now = new Date()) {
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
   return history
