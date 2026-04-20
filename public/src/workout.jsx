@@ -1,8 +1,15 @@
 // Active Workout — hero screen. Three card layout variants via Tweaks.
 
+function lastSessionFor(history, exerciseName) {
+  const entries = (history || [])
+    .filter(h => h.exercise === exerciseName && h.sets?.length > 0)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return entries[0] || null;
+}
+
 function ActiveWorkoutScreen({
   accent, dayId, session, onUpdate, onComplete, onPickerOpen, onRestStart,
-  cardVariant = 'bubbles',
+  cardVariant = 'bubbles', history = [],
 }) {
   const day = DAYS[dayId];
   const curIdx = session.currentExercise;
@@ -117,6 +124,7 @@ function ActiveWorkoutScreen({
           onAddSet={onAddSet}
           onFinish={onFinishExercise}
           indexLabel={`${curIdx + 1}/${totalExercises}`}
+          lastSession={lastSessionFor(history, cur.exercise)}
         />
       </div>
 
@@ -168,14 +176,32 @@ function IconBtn({ children, onClick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // ExerciseCard — switches on variant
 // ─────────────────────────────────────────────────────────────
-function ExerciseCard({ ex, variant, accent, isCurrent, onChange, onSetReps, onAddSet, onFinish, indexLabel }) {
-  if (variant === 'grid') return <CardGrid {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel }} />;
-  if (variant === 'list') return <CardList {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel }} />;
-  return <CardBubbles {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel }} />;
+function ExerciseCard({ ex, variant, accent, isCurrent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }) {
+  if (variant === 'grid') return <CardGrid {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }} />;
+  if (variant === 'list') return <CardList {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }} />;
+  return <CardBubbles {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }} />;
+}
+
+function LastSessionHint({ lastSession }) {
+  if (!lastSession) return null;
+  const reps = lastSession.sets.join(' · ');
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6, marginTop: 4,
+      fontFamily: MONO, fontSize: 10, color: 'rgba(242,243,245,0.3)',
+      letterSpacing: 0.4,
+    }}>
+      <span>PREV</span>
+      <span style={{ color: 'rgba(242,243,245,0.2)' }}>·</span>
+      <span>{lastSession.weight} kg</span>
+      <span style={{ color: 'rgba(242,243,245,0.2)' }}>·</span>
+      <span>{reps}</span>
+    </div>
+  );
 }
 
 // Variant A (default) — "bubbles": big weight, set dots w/ rep counts inside
-function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel }) {
+function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }) {
   const [npOpen, setNpOpen] = React.useState(null); // {kind:'weight'|'rest'|'set', setIdx}
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
@@ -201,6 +227,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
               fontFamily: SANS, fontSize: 20, fontWeight: 700, letterSpacing: -0.4,
               lineHeight: 1.15,
             }}>{ex.exercise}</div>
+            <LastSessionHint lastSession={lastSession} />
           </div>
         </div>
 
@@ -335,7 +362,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
 }
 
 // Variant B — compact list (one row per set)
-function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel }) {
+function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }) {
   const [npOpen, setNpOpen] = React.useState(null);
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
@@ -356,6 +383,7 @@ function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
             <div style={{ fontFamily: SANS, fontSize: 20, fontWeight: 700, letterSpacing: -0.4, lineHeight: 1.15 }}>
               {ex.exercise}
             </div>
+            <LastSessionHint lastSession={lastSession} />
           </div>
           <div style={{ textAlign: 'right' }}>
             <div onClick={() => setNpOpen({ kind: 'weight' })} style={{ cursor: 'pointer' }}>
@@ -476,7 +504,7 @@ function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
 }
 
 // Variant C — big hero number + compact set grid
-function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel }) {
+function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }) {
   const [npOpen, setNpOpen] = React.useState(null);
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
@@ -493,9 +521,11 @@ function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
         <div style={{ fontFamily: MONO, fontSize: 10, color: BL.text3, letterSpacing: 1.2, marginBottom: 2 }}>
           EXERCISE {indexLabel}
         </div>
-        <div style={{ fontFamily: SANS, fontSize: 18, fontWeight: 700, letterSpacing: -0.4, marginBottom: 14, lineHeight: 1.2 }}>
+        <div style={{ fontFamily: SANS, fontSize: 18, fontWeight: 700, letterSpacing: -0.4, lineHeight: 1.2 }}>
           {ex.exercise}
         </div>
+        <LastSessionHint lastSession={lastSession} />
+        <div style={{ marginBottom: 14 }} />
 
         {/* Hero weight */}
         <div onClick={() => setNpOpen({ kind: 'weight' })} style={{

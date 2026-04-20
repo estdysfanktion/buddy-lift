@@ -219,6 +219,7 @@ function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history 
           onPickerOpen={() => setPickerOpen(true)}
           onRestStart={(s) => setRestStart(Date.now() + ':' + s)}
           cardVariant={cardVariant}
+          history={history}
         />
       )}
       {tab === 'history' && <HistoryScreen accent={accent} history={history} />}
