@@ -205,7 +205,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
   const [npOpen, setNpOpen] = React.useState(null); // {kind:'weight'|'rest'|'set', setIdx}
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
-  const allSetsLogged = filled === ex.sets.length;
+  const allSetsLogged = filled > 0;
 
   const volume = ex.weight * ex.sets.reduce((a,b)=> a + (b||0), 0);
 
@@ -335,7 +335,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
           opacity: allSetsLogged ? 1 : 0.5,
           letterSpacing: -0.1,
         }}>
-          {allSetsLogged ? 'Finish exercise →' : `Log ${ex.sets.length - filled} more ${ex.sets.length - filled === 1 ? 'set' : 'sets'}`}
+          {filled > 0 ? 'Finish exercise →' : 'Log at least one set'}
         </button>
       </div>
 
@@ -366,7 +366,7 @@ function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
   const [npOpen, setNpOpen] = React.useState(null);
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
-  const allSetsLogged = filled === ex.sets.length;
+  const allSetsLogged = filled > 0;
   const volume = ex.weight * ex.sets.reduce((a,b)=> a + (b||0), 0);
 
   return (
@@ -478,7 +478,7 @@ function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
           cursor: allSetsLogged ? 'pointer' : 'not-allowed',
           opacity: allSetsLogged ? 1 : 0.5, letterSpacing: -0.1,
         }}>
-          {allSetsLogged ? 'Finish exercise →' : `${ex.sets.length - filled} sets remaining`}
+          {filled > 0 ? 'Finish exercise →' : 'Log at least one set'}
         </button>
       </div>
       {npOpen && (
@@ -508,7 +508,7 @@ function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
   const [npOpen, setNpOpen] = React.useState(null);
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
-  const allSetsLogged = filled === ex.sets.length;
+  const allSetsLogged = filled > 0;
   const volume = ex.weight * ex.sets.reduce((a,b)=> a + (b||0), 0);
 
   return (
@@ -600,7 +600,7 @@ function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
           cursor: allSetsLogged ? 'pointer' : 'not-allowed',
           opacity: allSetsLogged ? 1 : 0.5,
         }}>
-          {allSetsLogged ? 'Finish exercise →' : `Log ${ex.sets.length - filled} more`}
+          {filled > 0 ? 'Finish exercise →' : 'Log at least one set'}
         </button>
       </div>
       {npOpen && (
