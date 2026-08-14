@@ -133,7 +133,6 @@ function RestBanner({ seconds, accent, onSkip, onAdd }) {
 
 function ExercisePicker({ accent, currentExercise, onSwap, onClose }) {
   const [q, setQ] = React.useState('');
-  const filtered = ALL_EXERCISES.filter(e => e.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div onClick={onClose} style={{
@@ -390,8 +389,7 @@ function VolumeChart({ data, accent }) {
 // ─────────────────────────────────────────────────────────────
 function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
   const day = DAYS[dayId];
-  const totalVol = session.exercises.reduce((a, e) =>
-    a + e.weight * e.sets.reduce((s, r) => s + (r || 0), 0), 0);
+  const totalVol = session.exercises.reduce((a, e) => a + computeVolume(e.weight, e.sets), 0);
   const totalSets = session.exercises.reduce((a, e) => a + e.sets.filter(s => s != null).length, 0);
   const totalReps = session.exercises.reduce((a, e) => a + e.sets.reduce((s, r) => s + (r || 0), 0), 0);
 
@@ -479,7 +477,7 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
         }}>Per exercise</div>
         <div style={{ background: BL.card, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BL.line}` }}>
           {session.exercises.map((ex, i) => {
-            const vol = ex.weight * ex.sets.reduce((s, r) => s + (r || 0), 0);
+            const vol = computeVolume(ex.weight, ex.sets);
             const setStr = ex.sets.filter(s => s != null).map(s => s).join(' · ');
             return (
               <div key={i} style={{
@@ -509,7 +507,6 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
           onSync={doSync}
           onRetry={doSync}
           exerciseCount={session.exercises.length}
-          liveSync={liveSync}
         />
 
         <button onClick={onDone} style={{
@@ -525,7 +522,7 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
 
 Object.assign(window, { NumberPad, RestBanner, ExercisePicker, HistoryScreen, SummaryScreen });
 
-function SyncStrip({ state, results, accent, onSync, onRetry, exerciseCount, liveSync }) {
+function SyncStrip({ state, results, accent, onSync, onRetry, exerciseCount }) {
   const okCount = results?.filter(r => r.ok).length ?? 0;
   const failCount = results?.filter(r => !r.ok).length ?? 0;
 

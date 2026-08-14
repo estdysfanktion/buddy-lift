@@ -45,11 +45,19 @@ const DAYS = {
   },
 };
 
-const ALL_EXERCISES = [
-  ...DAYS[1].exercises,
-  ...DAYS[3].exercises,
-  ...DAYS[5].exercises,
-];
+// Canonical volume formula: weight * sum(sets), guarding against null/
+// undefined entries (an in-progress exercise's sets array is padded with
+// `null` for sets not yet done — see Array(4).fill(null) in app.jsx).
+// Single source of truth for the browser side — used by data.jsx itself
+// (seedHistory below), workout.jsx, and overlays.jsx.
+//
+// api/_shared.js carries a byte-for-byte equivalent copy for the API side,
+// since api/*.js (Node ESM) cannot import public/src/*.jsx (in-browser,
+// no build step). scripts/check-duplication.mjs executes both copies over
+// a shared input matrix on every run and fails loudly if they diverge.
+function computeVolume(weight, sets) {
+  return weight * sets.reduce((a, b) => a + (b || 0), 0);
+}
 
 // Per-day accent colors (oklch). Each day stains chrome + sets.
 const DAY_ACCENTS = {
@@ -90,7 +98,7 @@ function seedHistory() {
       name: `${DAYS[dayId].title} – ${exercise}`,
       exercise, weight, rest,
       sets, // array of reps
-      volume: weight * sets.reduce((a,b)=>a+b,0),
+      volume: computeVolume(weight, sets),
     });
   };
 
@@ -194,6 +202,6 @@ function formatK(n) {
 }
 
 Object.assign(window, {
-  DAYS, ALL_EXERCISES, DAY_ACCENTS, HISTORY_SEED,
-  nextDayId, computeStreak, weekVolume, formatK,
+  DAYS, DAY_ACCENTS, HISTORY_SEED,
+  nextDayId, computeStreak, weekVolume, formatK, computeVolume,
 });

@@ -8,7 +8,7 @@ function lastSessionFor(history, exerciseName) {
 }
 
 function ActiveWorkoutScreen({
-  accent, dayId, session, onUpdate, onComplete, onPickerOpen, onRestStart,
+  accent, dayId, session, onUpdate, onFinishExercise, onPickerOpen, onRestStart,
   cardVariant = 'bubbles', history = [],
 }) {
   const day = DAYS[dayId];
@@ -31,16 +31,6 @@ function ActiveWorkoutScreen({
   const onAddSet = () => {
     if (cur.sets.length >= 8) return;
     update({ sets: [...cur.sets, null] });
-  };
-
-  const onFinishExercise = () => {
-    const done = [...session.exercises];
-    done[curIdx] = { ...done[curIdx], done: true };
-    if (curIdx + 1 >= session.exercises.length) {
-      onComplete();
-    } else {
-      onUpdate('advance', done);
-    }
   };
 
   return (
@@ -67,10 +57,10 @@ function ActiveWorkoutScreen({
               DAY {dayId} · {formatTime(session.elapsed)}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <IconBtn onClick={onPickerOpen} accent={accent}>
+              <IconBtn onClick={onPickerOpen}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3h12M3 7h8M5 11h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
               </IconBtn>
-              <IconBtn accent={accent}>
+              <IconBtn>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.6"/><path d="M7 4v3l2 1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
               </IconBtn>
             </div>
@@ -118,7 +108,6 @@ function ActiveWorkoutScreen({
           ex={cur}
           variant={cardVariant}
           accent={accent}
-          isCurrent
           onChange={update}
           onSetReps={setReps}
           onAddSet={onAddSet}
@@ -140,7 +129,7 @@ function ActiveWorkoutScreen({
             <div style={{ flex: 1, height: 1, background: BL.line }} />
             <span style={{ fontFamily: MONO, color: BL.text3 }}>{curIdx + 2}/{totalExercises}</span>
           </div>
-          <NextPeek ex={next} accent={accent} />
+          <NextPeek ex={next} />
         </div>
       )}
 
@@ -162,7 +151,7 @@ function ActiveWorkoutScreen({
   );
 }
 
-function IconBtn({ children, onClick, accent }) {
+function IconBtn({ children, onClick }) {
   return (
     <button onClick={onClick} style={{
       width: 32, height: 32, borderRadius: 10,
@@ -176,7 +165,7 @@ function IconBtn({ children, onClick, accent }) {
 // ─────────────────────────────────────────────────────────────
 // ExerciseCard — switches on variant
 // ─────────────────────────────────────────────────────────────
-function ExerciseCard({ ex, variant, accent, isCurrent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }) {
+function ExerciseCard({ ex, variant, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }) {
   if (variant === 'grid') return <CardGrid {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }} />;
   if (variant === 'list') return <CardList {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }} />;
   return <CardBubbles {...{ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLabel, lastSession }} />;
@@ -207,7 +196,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
   const currentSetIdx = ex.sets.findIndex(s => s == null);
   const allSetsLogged = filled > 0;
 
-  const volume = ex.weight * ex.sets.reduce((a,b)=> a + (b||0), 0);
+  const volume = computeVolume(ex.weight, ex.sets);
 
   return (
     <>
@@ -367,7 +356,7 @@ function CardList({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
   const allSetsLogged = filled > 0;
-  const volume = ex.weight * ex.sets.reduce((a,b)=> a + (b||0), 0);
+  const volume = computeVolume(ex.weight, ex.sets);
 
   return (
     <>
@@ -509,7 +498,7 @@ function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
   const filled = ex.sets.filter(s => s != null).length;
   const currentSetIdx = ex.sets.findIndex(s => s == null);
   const allSetsLogged = filled > 0;
-  const volume = ex.weight * ex.sets.reduce((a,b)=> a + (b||0), 0);
+  const volume = computeVolume(ex.weight, ex.sets);
 
   return (
     <>
@@ -625,7 +614,7 @@ function CardGrid({ ex, accent, onChange, onSetReps, onAddSet, onFinish, indexLa
   );
 }
 
-function NextPeek({ ex, accent }) {
+function NextPeek({ ex }) {
   return (
     <div style={{
       background: BL.card, borderRadius: 14, padding: 14,
