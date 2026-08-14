@@ -4,6 +4,7 @@
 
 import { Client } from '@notionhq/client';
 import { checkPin } from './health.js';
+import { EXERCISE_PROP } from './_shared.js';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const DB_ID = process.env.NOTION_DATABASE_ID;
@@ -51,13 +52,13 @@ export default async function handler(req, res) {
   res.status(allOk ? 200 : 207).json({ ok: allOk, results });
 }
 
-function buildProperties({ date, dayTitle, exercise, weight, rest, sets }) {
+export function buildProperties({ date, dayTitle, exercise, weight, rest, sets }) {
   const props = {
     'Name': {
       title: [{ text: { content: `${dayTitle || 'Workout'} – ${exercise}` } }],
     },
     'Date': { date: { start: date } },
-    ' Exercise ': { multi_select: [{ name: exercise }] },
+    [EXERCISE_PROP]: { multi_select: [{ name: exercise }] },
     'Weight': { number: Number(weight) || 0 },
     'Rest': { number: Number(rest) || 0 },
   };

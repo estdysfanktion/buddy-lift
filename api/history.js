@@ -1,8 +1,14 @@
 // api/history.js — returns workout history from Notion in HISTORY_SEED format
 import { Client } from '@notionhq/client';
 import { checkPin } from './health.js';
+import { EXERCISE_PROP, computeVolume } from './_shared.js';
 
-const EXERCISE_TO_DAY = {
+// KEEP IN SYNC WITH public/src/data.jsx's DAYS exercise lists.
+// api/*.js (Node ESM) cannot import public/src/*.jsx (in-browser, no build
+// step) so this is necessarily a second copy of the same mapping.
+// scripts/check-duplication.mjs derives the equivalent map from DAYS and
+// diffs it against this object on every run — it fails loudly on drift.
+export const EXERCISE_TO_DAY = {
   'Dumbbell bench press': 1, 'Incline dumbbell press': 1, 'Dumbell Floor press': 1,
   'Tricep Kickback': 1, 'Dips': 1,
   'Bent-over row': 3, 'Dumbbell row': 3, 'Tripod row': 3, 'Reverse grip row': 3,
@@ -40,7 +46,7 @@ export default async function handler(req, res) {
 
       for (const page of resp.results) {
         const p = page.properties;
-        const exercise = p[' Exercise ']?.multi_select?.[0]?.name;
+        const exercise = p[EXERCISE_PROP]?.multi_select?.[0]?.name;
         if (!exercise) continue;
         const date = p.Date?.date?.start;
         if (!date) continue;
@@ -51,7 +57,7 @@ export default async function handler(req, res) {
           const v = p[`Set ${i}`]?.number;
           if (v != null) sets.push(v);
         }
-        const volume = weight * sets.reduce((a, b) => a + b, 0);
+        const volume = computeVolume(weight, sets);
 
         rows.push({
           id: page.id,
