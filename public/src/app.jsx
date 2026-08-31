@@ -60,7 +60,7 @@ function seedMidSession(session) {
 
 function LockScreen({ onUnlock }) {
   const [pin, setPin] = React.useState('');
-  const [error, setError] = React.useState(false);
+  const [error, setError] = React.useState('');
 
   const submit = async () => {
     try {
@@ -70,12 +70,14 @@ function LockScreen({ onUnlock }) {
         localStorage.setItem('bl_pin', pin);
         onUnlock(pin);
       } else {
-        setError(true);
+        setError('Wrong PIN');
         setPin('');
-        setTimeout(() => setError(false), 1200);
+        setTimeout(() => setError(''), 1200);
       }
     } catch {
-      setError(true);
+      // /api/health unreachable or returned non-JSON (e.g. a Vercel auth
+      // wall or offline) — the PIN may well be right, say what actually broke.
+      setError("Can't reach server");
     }
   };
 
@@ -106,7 +108,7 @@ function LockScreen({ onUnlock }) {
         padding: '12px 32px', borderRadius: 12, background: accent,
         color: '#0A0B0D', border: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer',
       }}>Unlock</button>
-      {error && <div style={{ color: '#FF5F57', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>Wrong PIN</div>}
+      {error && <div style={{ color: '#FF5F57', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>{error}</div>}
     </div>
   );
 }
@@ -232,6 +234,16 @@ function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [completed, setCompleted] = useState(false);
 
+  // A finished session that never fully synced survives in localStorage
+  // (written by SummaryScreen). Surface it on launch so it can be retried
+  // or explicitly discarded instead of silently vanishing from the log.
+  const [pendingRestore, setPendingRestore] = useState(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('bl_pending_sync'));
+      return p && DAYS[p.dayId] && Array.isArray(p.exercises) ? p : null;
+    } catch (e) { return null; }
+  });
+
   const updateExercise = (idx, patch) => {
     setSession(s => {
       const exs = [...s.exercises];
@@ -254,6 +266,24 @@ function WorkoutDemo({ accent, dayId, session, setSession, cardVariant, history 
     });
     setPickerOpen(false);
   };
+
+  if (pendingRestore && !completed) {
+    return (
+      <SummaryScreen
+        accent={DAY_ACCENTS[pendingRestore.dayId].hex}
+        dayId={pendingRestore.dayId}
+        session={{
+          elapsed: pendingRestore.elapsed || 0,
+          exercises: pendingRestore.exercises.map(e => ({
+            exercise: e.exercise, weight: e.weight, rest: e.rest, sets: e.sets,
+          })),
+        }}
+        restored
+        liveSync
+        onDone={() => { localStorage.removeItem('bl_pending_sync'); setPendingRestore(null); }}
+      />
+    );
+  }
 
   if (completed) {
     return <SummaryScreen accent={accent} dayId={dayId} session={session} onDone={() => { setCompleted(false); onCompleteExternal?.(); }} liveSync={typeof window !== 'undefined' && window.location.protocol !== 'file:'} />;
