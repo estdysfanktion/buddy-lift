@@ -387,7 +387,7 @@ function VolumeChart({ data, accent }) {
 // ─────────────────────────────────────────────────────────────
 // Post-workout summary
 // ─────────────────────────────────────────────────────────────
-function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
+function SummaryScreen({ accent, dayId, session, onDone, liveSync = false, restored = false }) {
   const day = DAYS[dayId];
   const totalVol = session.exercises.reduce((a, e) => a + computeVolume(e.weight, e.sets), 0);
   const totalSets = session.exercises.reduce((a, e) => a + e.sets.filter(s => s != null).length, 0);
@@ -397,33 +397,68 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
   const [syncState, setSyncState] = React.useState('idle');
   const [syncResults, setSyncResults] = React.useState(null);
 
+  // Persist the finished session before any sync attempt, with the workout's
+  // date frozen at completion time. If sync fails (or never gets tapped) the
+  // record survives an app restart and resurfaces as this same screen on the
+  // next launch. Cleared only once every exercise has synced.
+  React.useEffect(() => {
+    if (!liveSync || restored) return;
+    localStorage.setItem('bl_pending_sync', JSON.stringify({
+      date: new Date().toISOString().slice(0, 10),
+      dayId,
+      dayTitle: day.title,
+      elapsed: session.elapsed,
+      exercises: session.exercises.map(ex => ({
+        exercise: ex.exercise,
+        weight: ex.weight,
+        rest: ex.rest,
+        sets: ex.sets.filter(s => s != null),
+        ok: false,
+      })),
+    }));
+  }, []);
+
   const doSync = React.useCallback(async () => {
     if (typeof postSync !== 'function') {
       setSyncState('fail');
       setSyncResults([{ ok: false, error: 'postSync not available' }]);
       return;
     }
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem('bl_pending_sync')); } catch (e) {}
+    if (!pending?.exercises?.length) {
+      setSyncState('fail');
+      setSyncResults([{ ok: false, error: 'Nothing to sync' }]);
+      return;
+    }
+    const unsynced = pending.exercises.filter(e => !e.ok);
+    if (!unsynced.length) {
+      localStorage.removeItem('bl_pending_sync');
+      setSyncState('ok');
+      return;
+    }
     setSyncState('syncing');
     try {
-      const payload = {
-        date: new Date().toISOString().slice(0, 10),
-        dayId,
-        dayTitle: day.title,
-        exercises: session.exercises.map(ex => ({
-          exercise: ex.exercise,
-          weight: ex.weight,
-          rest: ex.rest,
-          sets: ex.sets.filter(s => s != null),
-        })),
-      };
-      const res = await postSync(payload);
-      setSyncResults(res.results || []);
-      setSyncState(res.ok ? 'ok' : (res.results?.some(r => r.ok) ? 'partial' : 'fail'));
+      const res = await postSync({
+        date: pending.date,
+        dayId: pending.dayId,
+        dayTitle: pending.dayTitle,
+        exercises: unsynced.map(({ ok, ...ex }) => ex),
+      });
+      const next = applySyncResults(pending, res.results || []);
+      const allOk = next.exercises.every(e => e.ok);
+      if (allOk) localStorage.removeItem('bl_pending_sync');
+      else localStorage.setItem('bl_pending_sync', JSON.stringify(next));
+      const failErr = (res.results || []).find(r => !r.ok)?.error || res.error || 'Sync failed';
+      setSyncResults(next.exercises.map(e => ({
+        exercise: e.exercise, ok: e.ok, error: e.ok ? undefined : failErr,
+      })));
+      setSyncState(allOk ? 'ok' : next.exercises.some(e => e.ok) ? 'partial' : 'fail');
     } catch (e) {
       setSyncState('fail');
       setSyncResults([{ ok: false, error: e.message }]);
     }
-  }, [liveSync, dayId, session]);
+  }, [restored]);
 
 
   return (
@@ -514,7 +549,7 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false }) {
           background: accent, color: '#0A0B0D', border: 0,
           fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer',
           letterSpacing: -0.2,
-        }}>Done</button>
+        }}>{restored && syncState !== 'ok' ? 'Discard workout' : 'Done'}</button>
       </div>
     </div>
   );

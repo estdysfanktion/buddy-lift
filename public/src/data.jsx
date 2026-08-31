@@ -59,6 +59,19 @@ function computeVolume(weight, sets) {
   return weight * sets.reduce((a, b) => a + (b || 0), 0);
 }
 
+// Applies one /api/sync response to a pending-sync record (the localStorage
+// 'bl_pending_sync' object that survives failed or skipped syncs). results[i]
+// corresponds by position to the i-th exercise that was actually sent — the
+// not-yet-ok ones, in order. An ok flag is never un-set, so a retry only ever
+// re-sends exercises that still failed and can't duplicate synced rows.
+function applySyncResults(pending, results) {
+  let ri = 0;
+  const exercises = pending.exercises.map(e =>
+    e.ok ? e : { ...e, ok: results[ri++]?.ok === true }
+  );
+  return { ...pending, exercises };
+}
+
 // Per-day accent colors (oklch). Each day stains chrome + sets.
 const DAY_ACCENTS = {
   1: {
@@ -203,5 +216,5 @@ function formatK(n) {
 
 Object.assign(window, {
   DAYS, DAY_ACCENTS, HISTORY_SEED,
-  nextDayId, computeStreak, weekVolume, formatK, computeVolume,
+  nextDayId, computeStreak, weekVolume, formatK, computeVolume, applySyncResults,
 });
