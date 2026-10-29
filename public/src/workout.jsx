@@ -49,7 +49,7 @@ function ActiveWorkoutScreen({
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             marginBottom: 8,
           }}>
-            <div style={{
+            <div data-testid="workout-clock" style={{
               display: 'flex', alignItems: 'center', gap: 8,
               fontFamily: MONO, fontSize: 11, color: accent, letterSpacing: 1,
             }}>
@@ -212,7 +212,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
               fontFamily: MONO, fontSize: 10, color: BL.text3, letterSpacing: 1.2,
               marginBottom: 2,
             }}>EXERCISE {indexLabel}</div>
-            <div style={{
+            <div data-testid="current-exercise" style={{
               fontFamily: SANS, fontSize: 20, fontWeight: 700, letterSpacing: -0.4,
               lineHeight: 1.15,
             }}>{ex.exercise}</div>
@@ -282,7 +282,7 @@ function CardBubbles({ ex, accent, onChange, onSetReps, onAddSet, onFinish, inde
             const isCurrent = i === currentSetIdx;
             const isDone = reps != null;
             return (
-              <div key={i} onClick={() => setNpOpen({ kind: 'set', setIdx: i })} style={{
+              <div key={i} data-testid="set-bubble" data-reps={reps == null ? '' : String(reps)} onClick={() => setNpOpen({ kind: 'set', setIdx: i })} style={{
                 width: 58, height: 58, borderRadius: 14,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', position: 'relative',

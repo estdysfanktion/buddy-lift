@@ -47,7 +47,7 @@ const DAYS = {
 
 // Canonical volume formula: weight * sum(sets), guarding against null/
 // undefined entries (an in-progress exercise's sets array is padded with
-// `null` for sets not yet done — see Array(4).fill(null) in app.jsx).
+// `null` for sets not yet done — see buildSession).
 // Single source of truth for the browser side — used by data.jsx itself
 // (seedHistory below), workout.jsx, and overlays.jsx.
 //
@@ -188,6 +188,133 @@ const DAY_ACCENTS = {
   },
 };
 
+// localStorage key for a workout that is still being logged. Distinct from
+// 'bl_pending_sync', which is a finished session waiting on Notion.
+const ACTIVE_SESSION_KEY = 'bl_active_session';
+
+function seedWeight(ex) {
+  const map = {
+    'Dumbbell bench press': 22, 'Incline dumbbell press': 20,
+    'Dumbell Floor press': 20, 'Tricep Kickback': 12, 'Dips': 0,
+    'Bent-over row': 24, 'Dumbbell row': 24, 'Tripod row': 22,
+    'Reverse grip row': 20, 'Biceps Curls': 14, 'Hammer curl': 14, 'Pullover': 18,
+    'Arnold press': 16, 'Standing dumbbell press': 18, 'Lateral Raises': 10,
+    'Over head press': 18, 'Squats': 24, 'Lunges': 18, 'Calf raises': 16,
+  };
+  return map[ex] ?? 15;
+}
+
+// Whole seconds since a wall-clock start. Negative results (clock skew)
+// clamp to 0 so a restored timer never runs backwards.
+function elapsedSeconds(startedAt, now = Date.now()) {
+  const t = Number(startedAt);
+  if (!Number.isFinite(t)) return 0;
+  return Math.max(0, Math.floor((Number(now) - t) / 1000));
+}
+
+function buildSession(dayId, startedAt = Date.now()) {
+  const day = DAYS[dayId];
+  const start = Number.isFinite(Number(startedAt)) ? Number(startedAt) : Date.now();
+  return {
+    dayId,
+    startedAt: start,
+    elapsed: elapsedSeconds(start),
+    currentExercise: 0,
+    exercises: day.exercises.map((ex) => ({
+      exercise: ex,
+      weight: seedWeight(ex),
+      rest: 90,
+      sets: Array(4).fill(null),
+      done: false,
+    })),
+  };
+}
+
+// True once the athlete has changed the fresh template: any logged reps,
+// a weight or rest edit, a swap, an added set, or moving off exercise 1.
+// An untouched session is not worth restoring after a reload.
+function sessionHasProgress(session) {
+  if (!session || !DAYS[session.dayId] || !Array.isArray(session.exercises)) return false;
+  if (session.currentExercise) return true;
+  const fresh = buildSession(session.dayId, session.startedAt);
+  if (session.exercises.length !== fresh.exercises.length) return true;
+  return session.exercises.some((ex, i) => {
+    const base = fresh.exercises[i];
+    if (!base || !ex) return true;
+    if (ex.done) return true;
+    if (ex.exercise !== base.exercise) return true;
+    if (Number(ex.weight) !== Number(base.weight)) return true;
+    if (Number(ex.rest) !== Number(base.rest)) return true;
+    if (!Array.isArray(ex.sets) || ex.sets.length !== base.sets.length) return true;
+    return ex.sets.some(s => s != null);
+  });
+}
+
+// Keep an in-progress session when the planned day changes (history load,
+// home-screen arrows). Rebuild only a session that still has no progress.
+function sessionAfterDayChange(session, dayId) {
+  if (!session || !DAYS[dayId]) return session;
+  if (sessionHasProgress(session)) return session;
+  if (session.dayId === dayId) return session;
+  return buildSession(dayId);
+}
+
+function serializeActiveSession(session) {
+  return {
+    v: 1,
+    dayId: session.dayId,
+    startedAt: session.startedAt,
+    currentExercise: session.currentExercise,
+    exercises: session.exercises.map(ex => ({
+      exercise: ex.exercise,
+      weight: ex.weight,
+      rest: ex.rest,
+      sets: ex.sets.map(s => (s == null ? null : s)),
+      done: !!ex.done,
+    })),
+  };
+}
+
+// Returns a live session, or null when the saved record is unusable.
+// `elapsed` is derived from startedAt and any stored elapsed is ignored.
+function normalizeActiveSession(raw, now = Date.now()) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (raw.v != null && raw.v !== 1) return null;
+  const dayId = Number(raw.dayId);
+  if (!DAYS[dayId]) return null;
+  const startedAt = Number(raw.startedAt);
+  if (!Number.isFinite(startedAt)) return null;
+  if (startedAt < Date.UTC(2024, 0, 1) || startedAt > now + 86400000) return null;
+  if (!Array.isArray(raw.exercises) || raw.exercises.length === 0 || raw.exercises.length > 12) return null;
+  const currentExercise = Number(raw.currentExercise);
+  if (!Number.isInteger(currentExercise) || currentExercise < 0 || currentExercise >= raw.exercises.length) return null;
+
+  const exercises = [];
+  for (const ex of raw.exercises) {
+    if (!ex || typeof ex.exercise !== 'string' || ex.exercise.length === 0 || ex.exercise.length > 80) return null;
+    const weight = Number(ex.weight);
+    const rest = Number(ex.rest);
+    if (!Number.isFinite(weight) || !Number.isFinite(rest)) return null;
+    if (!Array.isArray(ex.sets) || ex.sets.length < 1 || ex.sets.length > 8) return null;
+    const sets = [];
+    for (const s of ex.sets) {
+      if (s == null || s === '') { sets.push(null); continue; }
+      const n = Number(s);
+      if (!Number.isFinite(n)) return null;
+      sets.push(n);
+    }
+    exercises.push({ exercise: ex.exercise, weight, rest, sets, done: !!ex.done });
+  }
+
+  return {
+    dayId,
+    startedAt,
+    elapsed: elapsedSeconds(startedAt, now),
+    currentExercise,
+    exercises,
+  };
+}
+
 // Seed recent history — ~4 weeks of completed workouts for realism
 function seedHistory() {
   const today = new Date('2026-04-20');
@@ -306,7 +433,9 @@ function formatK(n) {
 }
 
 Object.assign(window, {
-  DAYS, DAY_ACCENTS, HISTORY_SEED,
+  DAYS, DAY_ACCENTS, HISTORY_SEED, ACTIVE_SESSION_KEY,
   nextDayId, computeStreak, weekVolume, formatK, computeVolume, applySyncResults,
   exercisesToSync, newSyncId, settleSyncResponse, handleSyncAttempt,
+  seedWeight, elapsedSeconds, buildSession, sessionHasProgress, sessionAfterDayChange,
+  serializeActiveSession, normalizeActiveSession,
 });
