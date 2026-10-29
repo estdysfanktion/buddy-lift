@@ -370,9 +370,12 @@ describe('syncExercises', () => {
 
   it('sets a Hobby-legal maxDuration on the function and in vercel.json', () => {
     const vercel = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
+    const syncSrc = fs.readFileSync(path.join(ROOT, 'api/sync.js'), 'utf8');
     expect(config.maxDuration).toBe(SYNC_MAX_DURATION_SECONDS);
     expect(vercel.functions['api/sync.js'].maxDuration).toBe(SYNC_MAX_DURATION_SECONDS);
     expect(SYNC_MAX_DURATION_SECONDS).toBeLessThanOrEqual(300);
     expect(SYNC_MAX_DURATION_SECONDS).toBeGreaterThanOrEqual(60);
+    // Vercel rejects a non-literal here at build time (Unhandled type: "Identifier").
+    expect(syncSrc).toMatch(/export const config = \{ maxDuration: 60 \}/);
   });
 });

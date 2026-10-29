@@ -38,8 +38,11 @@ function getNotion() {
 }
 
 // Hobby allows 60s (pre-Fluid) and 300s (Fluid, current default and max).
+// `export const config` is read by Vercel's static-config parser, which only
+// accepts literals. `maxDuration: SYNC_MAX_DURATION_SECONDS` fails the build
+// with: Unhandled type: "Identifier" SYNC_MAX_DURATION_SECONDS
 export const SYNC_MAX_DURATION_SECONDS = 60;
-export const config = { maxDuration: SYNC_MAX_DURATION_SECONDS };
+export const config = { maxDuration: 60 };
 
 // Notion's published limit is an average of 3 requests per second.
 export const NOTION_CONCURRENCY = 3;
