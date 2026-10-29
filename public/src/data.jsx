@@ -72,6 +72,97 @@ function applySyncResults(pending, results) {
   return { ...pending, exercises };
 }
 
+// The subset actually posted to /api/sync. Strips the local ok flag (it is
+// not a Notion property) and skips exercises that already saved.
+function exercisesToSync(pending) {
+  return (pending?.exercises || [])
+    .filter(e => e && !e.ok)
+    .map(({ ok, ...ex }) => ex);
+}
+
+// Stable id for one finished workout. Sent with every sync attempt and
+// written onto each Notion page so a retry of THIS workout can find rows
+// the phone never got a receipt for. A later workout gets a new id.
+function newSyncId() {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch (e) {}
+  return 'bl-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+}
+
+// Turns one /api/sync body into the next pending record plus the screen
+// state. An empty or missing results array changes nothing that was already
+// ok — used when the server answered but named no saves.
+function settleSyncResponse(pending, body) {
+  const results = Array.isArray(body?.results) ? body.results : [];
+  const next = applySyncResults(pending, results);
+  let ri = 0;
+  const view = (pending.exercises || []).map((e, i) => {
+    if (e.ok) return { exercise: e.exercise, ok: true };
+    const result = results[ri++] || {};
+    const ok = next.exercises[i]?.ok === true;
+    const raw = (typeof result.error === 'string' && result.error)
+      || (typeof body?.error === 'string' && body.error)
+      || 'Did not save';
+    return { exercise: e.exercise, ok, error: ok ? undefined : raw };
+  });
+  const allOk = next.exercises.length > 0 && next.exercises.every(e => e.ok);
+  const anyOk = next.exercises.some(e => e.ok);
+  return {
+    pending: next,
+    clear: allOk,
+    state: allOk ? 'ok' : anyOk ? 'partial' : 'fail',
+    view,
+  };
+}
+
+// One user tap of Sync or Retry. `post` is postSync (injected so tests can
+// fail it). On a throw — timeout, non-OK with no results, network abort —
+// the returned pending record keeps every ok flag and keeps the same syncId
+// that was sent, so Retry does not mint a new workout identity.
+async function handleSyncAttempt(pending, post) {
+  const withId = (typeof pending.syncId === 'string' && pending.syncId)
+    ? pending
+    : { ...pending, syncId: newSyncId() };
+  const payload = {
+    date: withId.date,
+    dayId: withId.dayId,
+    dayTitle: withId.dayTitle,
+    syncId: withId.syncId,
+    exercises: exercisesToSync(withId),
+  };
+  if (!payload.exercises.length) {
+    return {
+      pending: withId,
+      clear: true,
+      state: 'ok',
+      view: (withId.exercises || []).map(e => ({ exercise: e.exercise, ok: true })),
+      thrown: false,
+    };
+  }
+  try {
+    const body = await post(payload);
+    return { ...settleSyncResponse(withId, body), thrown: false };
+  } catch (err) {
+    const message = (err && err.message) || 'Could not reach the server. This workout is saved on your phone. Tap Retry.';
+    const exercises = withId.exercises || [];
+    return {
+      pending: withId,
+      clear: false,
+      // Some rows may already be confirmed from an earlier response. Keep
+      // those flags and show partial progress; a total miss stays a failure
+      // whose message is the timeout / non-OK / abort text.
+      state: exercises.some(e => e.ok) ? 'partial' : 'fail',
+      view: exercises.map(e => e.ok
+        ? { exercise: e.exercise, ok: true }
+        : { exercise: e.exercise, ok: false, error: message }),
+      thrown: true,
+    };
+  }
+}
+
 // Per-day accent colors (oklch). Each day stains chrome + sets.
 const DAY_ACCENTS = {
   1: {
@@ -344,6 +435,7 @@ function formatK(n) {
 Object.assign(window, {
   DAYS, DAY_ACCENTS, HISTORY_SEED, ACTIVE_SESSION_KEY,
   nextDayId, computeStreak, weekVolume, formatK, computeVolume, applySyncResults,
+  exercisesToSync, newSyncId, settleSyncResponse, handleSyncAttempt,
   seedWeight, elapsedSeconds, buildSession, sessionHasProgress, sessionAfterDayChange,
   serializeActiveSession, normalizeActiveSession,
 });

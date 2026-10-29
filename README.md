@@ -91,7 +91,9 @@ POST /api/sync
 }
 ```
 
-The function creates one Notion page per exercise. Each row's **Name** is formatted `"<Day title> – <Exercise>"`. Total Volume auto-computes on Notion's side.
+The function creates one Notion page per exercise, a few at a time so a full day stays inside Notion's rate limit and the function time limit. Each row's **Name** is formatted `"<Day title> – <Exercise>"`. Total Volume auto-computes on Notion's side.
+
+If the phone loses the response (timeout, offline, or a non-OK status with no per-exercise results), the workout stays on the device with a Retry button. Retry sends only exercises not yet confirmed. Each new page also gets a one-line page-body note `buddy-lift:<id>` (not a database property) so a retry can recognize rows that were saved before the response was lost, without treating a later workout the same day as a duplicate. The database table view does not show that line.
 
 ## Local dev
 

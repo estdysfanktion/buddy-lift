@@ -398,9 +398,11 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false, resto
   const [syncResults, setSyncResults] = React.useState(null);
 
   // Persist the finished session before any sync attempt, with the workout's
-  // date frozen at completion time. If sync fails (or never gets tapped) the
-  // record survives an app restart and resurfaces as this same screen on the
-  // next launch. Cleared only once every exercise has synced.
+  // date frozen at completion time. syncId stays constant across retries so
+  // rows written before a lost response are recognized and not created again.
+  // If sync fails (or never gets tapped) the record survives an app restart
+  // and resurfaces as this same screen on the next launch. Cleared only once
+  // every exercise has synced.
   React.useEffect(() => {
     if (!liveSync || restored) return;
     localStorage.setItem('bl_pending_sync', JSON.stringify({
@@ -408,6 +410,7 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false, resto
       dayId,
       dayTitle: day.title,
       elapsed: session.elapsed,
+      syncId: newSyncId(),
       exercises: session.exercises.map(ex => ({
         exercise: ex.exercise,
         weight: ex.weight,
@@ -419,44 +422,35 @@ function SummaryScreen({ accent, dayId, session, onDone, liveSync = false, resto
   }, []);
 
   const doSync = React.useCallback(async () => {
-    if (typeof postSync !== 'function') {
+    if (typeof postSync !== 'function' || typeof handleSyncAttempt !== 'function') {
       setSyncState('fail');
-      setSyncResults([{ ok: false, error: 'postSync not available' }]);
+      setSyncResults([{ ok: false, error: 'Sync is unavailable. This workout is saved on your phone. Tap Retry.' }]);
       return;
     }
     let pending = null;
     try { pending = JSON.parse(localStorage.getItem('bl_pending_sync')); } catch (e) {}
     if (!pending?.exercises?.length) {
       setSyncState('fail');
-      setSyncResults([{ ok: false, error: 'Nothing to sync' }]);
+      setSyncResults([{ ok: false, error: 'Nothing to sync. This workout is saved on your phone. Tap Retry.' }]);
       return;
     }
-    const unsynced = pending.exercises.filter(e => !e.ok);
-    if (!unsynced.length) {
+    if (!exercisesToSync(pending).length) {
       localStorage.removeItem('bl_pending_sync');
       setSyncState('ok');
       return;
     }
     setSyncState('syncing');
     try {
-      const res = await postSync({
-        date: pending.date,
-        dayId: pending.dayId,
-        dayTitle: pending.dayTitle,
-        exercises: unsynced.map(({ ok, ...ex }) => ex),
-      });
-      const next = applySyncResults(pending, res.results || []);
-      const allOk = next.exercises.every(e => e.ok);
-      if (allOk) localStorage.removeItem('bl_pending_sync');
-      else localStorage.setItem('bl_pending_sync', JSON.stringify(next));
-      const failErr = (res.results || []).find(r => !r.ok)?.error || res.error || 'Sync failed';
-      setSyncResults(next.exercises.map(e => ({
-        exercise: e.exercise, ok: e.ok, error: e.ok ? undefined : failErr,
-      })));
-      setSyncState(allOk ? 'ok' : next.exercises.some(e => e.ok) ? 'partial' : 'fail');
+      const result = await handleSyncAttempt(pending, postSync);
+      if (result.clear) localStorage.removeItem('bl_pending_sync');
+      else localStorage.setItem('bl_pending_sync', JSON.stringify(result.pending));
+      setSyncResults(result.view);
+      setSyncState(result.state);
     } catch (e) {
+      // handleSyncAttempt already catches post failures. This is a bug path:
+      // leave the stored workout exactly as it was.
       setSyncState('fail');
-      setSyncResults([{ ok: false, error: e.message }]);
+      setSyncResults([{ ok: false, error: e?.message || 'Sync did not finish. This workout is saved on your phone. Tap Retry.' }]);
     }
   }, [restored]);
 
@@ -569,14 +563,19 @@ function SyncStrip({ state, results, accent, onSync, onRetry, exerciseCount }) {
 
   const label = state === 'ok' ? 'Synced to Notion'
     : state === 'syncing' ? 'Syncing to Notion…'
-    : state === 'partial' ? `${okCount}/${exerciseCount} synced`
-    : state === 'fail' ? 'Sync failed'
+    : state === 'partial' ? `${okCount}/${exerciseCount} saved to Notion`
+    : state === 'fail' ? 'Sync did not finish'
     : 'Save to Notion';
+
+  const firstError = results?.find(r => !r.ok)?.error;
+  const failDetail = firstError && /saved on your phone/i.test(firstError)
+    ? firstError
+    : `${firstError || 'Something went wrong.'} This workout is saved on your phone. Tap Retry.`;
 
   const sub = state === 'ok' ? `${exerciseCount} exercises saved · just now`
     : state === 'syncing' ? `Writing ${exerciseCount} exercises…`
-    : state === 'partial' ? `${failCount} failed — tap retry`
-    : state === 'fail' ? (results?.[0]?.error || 'Check Settings → Notion sync')
+    : state === 'partial' ? `${failCount} still to send. Tap Retry. Saved exercises will not be written again.`
+    : state === 'fail' ? failDetail
     : `${exerciseCount} exercises with sets, weights & date`;
 
   return (
@@ -599,7 +598,11 @@ function SyncStrip({ state, results, accent, onSync, onRetry, exerciseCount }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600 }}>{label}</div>
-        <div style={{ fontFamily: MONO, fontSize: 10, color: BL.text3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{
+          fontFamily: MONO, fontSize: 10, color: BL.text3, lineHeight: 1.35,
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: (state === 'fail' || state === 'partial') ? 'normal' : 'nowrap',
+        }}>
           {sub}
         </div>
       </div>

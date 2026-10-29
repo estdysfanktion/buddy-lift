@@ -75,3 +75,83 @@ describe('applySyncResults', () => {
     expect(p.exercises[0].ok).toBe(false);
   });
 });
+
+describe('exercisesToSync / settleSyncResponse / handleSyncAttempt', () => {
+  const { exercisesToSync, settleSyncResponse, handleSyncAttempt } = sandbox.window;
+
+  it('posts only the not-yet-ok exercises and strips the ok flag', () => {
+    const sent = exercisesToSync(pending(ex('Dips', true), ex('Squats'), ex('Lunges')));
+    expect(sent.map(e => e.exercise)).toEqual(['Squats', 'Lunges']);
+    expect(sent.every(e => e.ok === undefined)).toBe(true);
+    expect(sent[0]).toMatchObject({ weight: 10, rest: 90, sets: [10] });
+  });
+
+  it('settles a partial response and leaves only the failed exercise to retry', () => {
+    const settled = settleSyncResponse(
+      pending(ex('Dips'), ex('Squats')),
+      { ok: false, results: [{ ok: true, pageId: 'a' }, { ok: false, error: 'nope' }] },
+    );
+    expect(settled.state).toBe('partial');
+    expect(settled.clear).toBe(false);
+    expect(settled.pending.exercises.map(e => e.ok)).toEqual([true, false]);
+    expect(exercisesToSync(settled.pending).map(e => e.exercise)).toEqual(['Squats']);
+    expect(settled.view.map(v => v.ok)).toEqual([true, false]);
+    expect(settled.view[1].error).toBe('nope');
+  });
+
+  it('keeps earlier ok flags when the body has no results', () => {
+    const settled = settleSyncResponse(pending(ex('Dips', true), ex('Squats')), { error: 'nope' });
+    expect(settled.pending.exercises.map(e => e.ok)).toEqual([true, false]);
+    expect(settled.clear).toBe(false);
+    expect(settled.state).toBe('partial');
+  });
+
+  it('clears only when every exercise is saved', () => {
+    const settled = settleSyncResponse(
+      pending(ex('Dips', true), ex('Squats')),
+      { results: [{ ok: true }] },
+    );
+    expect(settled.clear).toBe(true);
+    expect(settled.state).toBe('ok');
+  });
+
+  it('on a thrown timeout keeps ok flags and reuses the same syncId', async () => {
+    const start = pending(ex('Dips', true), ex('Squats'));
+    let sent = null;
+    const first = await handleSyncAttempt(start, async (payload) => {
+      sent = payload;
+      const err = new Error('Sync timed out. This workout is saved on your phone. Tap Retry to send the exercises that did not save.');
+      err.retryable = true;
+      throw err;
+    });
+    expect(first.thrown).toBe(true);
+    expect(first.clear).toBe(false);
+    expect(first.state).toBe('partial');
+    expect(first.pending.exercises.map(e => e.ok)).toEqual([true, false]);
+    expect(first.pending.syncId).toBe(sent.syncId);
+    expect(sent.exercises.map(e => e.exercise)).toEqual(['Squats']);
+    expect(first.view.find(v => !v.ok).error).toMatch(/saved on your phone/);
+
+    const second = await handleSyncAttempt(first.pending, async (payload) => {
+      expect(payload.syncId).toBe(sent.syncId);
+      expect(payload.exercises.map(e => e.exercise)).toEqual(['Squats']);
+      return { ok: true, results: [{ ok: true, pageId: 'p2' }] };
+    });
+    expect(second.clear).toBe(true);
+    expect(second.state).toBe('ok');
+    expect(second.pending.exercises.every(e => e.ok)).toBe(true);
+  });
+
+  it('a total network failure stays retryable and does not mark anything saved', async () => {
+    const start = pending(ex('Dips'), ex('Squats'));
+    const result = await handleSyncAttempt(start, async () => {
+      throw new Error('Could not reach the server. This workout is saved on your phone. Tap Retry.');
+    });
+    expect(result.state).toBe('fail');
+    expect(result.clear).toBe(false);
+    expect(result.pending.exercises.every(e => !e.ok)).toBe(true);
+    expect(result.view.every(v => !v.ok)).toBe(true);
+    expect(result.view[0].error).toMatch(/Tap Retry/);
+    expect(exercisesToSync(result.pending)).toHaveLength(2);
+  });
+});
