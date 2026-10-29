@@ -16,15 +16,6 @@ async function checkHealth() {
   }
 }
 
-async function postSync(payload) {
-  const r = await fetch('/api/sync', {
-    method: 'POST',
-    headers: pinHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(payload),
-  });
-  return r.json();
-}
-
 function SettingsScreen({ accent, onClose }) {
   const [health, setHealth] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
@@ -159,4 +150,4 @@ function SettingsScreen({ accent, onClose }) {
   );
 }
 
-Object.assign(window, { SettingsScreen, checkHealth, postSync });
+Object.assign(window, { SettingsScreen, checkHealth });
